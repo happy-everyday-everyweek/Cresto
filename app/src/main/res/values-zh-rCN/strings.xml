@@ -126,6 +126,13 @@
     <string name="boost_your_experience_with_intelligent_cresto_function_calling">利用Cresto智能调用，提升体验。</string>
     <string name="text_processing_model">文本处理模型</string>
     <string name="multimodal_model">多模态模型</string>
+    <string name="ai_fetch_models">获取模型列表</string>
+    <string name="ai_fetching_models">正在获取…</string>
+    <string name="ai_models">可用模型</string>
+    <string name="ai_extract_extra">AI 创建待办时额外读取</string>
+    <string name="ai_extract_extra_footer">可选。开启后模型会从文本或截图里一并读取这些字段，并写入新建的待办。</string>
+    <string name="ai_extract_group">读取分组名</string>
+    <string name="ai_extract_flag">读取标记（优先级颜色）</string>
     <string name="save">保存</string>
     <string name="save_settings">保存设置</string>
     <string name="saved">已保存</string>

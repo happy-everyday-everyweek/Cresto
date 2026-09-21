@@ -19,5 +19,9 @@ data class EventItem(
     val reminderDayOffset: Int? = null,
     val reminderTime: String? = null,
     val subTasks: List<String> = emptyList(),
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    /** AI 可选读取的分组名（开关关闭时为空）。 */
+    val groupName: String? = null,
+    /** AI 可选判断的标记（颜色索引 0-7，0 表示无标记）。 */
+    val flag: Int? = null
 )
