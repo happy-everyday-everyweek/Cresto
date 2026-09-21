@@ -308,10 +308,12 @@ ${extraRules}
         if (rawUrl.isBlank()) return defaultEndpoint
 
         val normalized = rawUrl.trim().trimEnd('/')
-        return if (normalized.endsWith("/chat/completions")) {
-            normalized
-        } else {
-            "$normalized/v1/chat/completions"
+        return when {
+            normalized.endsWith("/chat/completions") -> normalized
+            // 有些服务的版本段在路径中间（例如 https://api.commandcode.ai/provider/v1），
+            // 这种地址只需补 /chat/completions，否则会拼出 /v1/v1/chat/completions 这样的错误地址。
+            VERSION_SEGMENT_REGEX.containsMatchIn(normalized) -> "$normalized/chat/completions"
+            else -> "$normalized/v1/chat/completions"
         }
     }
 
@@ -369,5 +371,8 @@ ${extraRules}
 
     private companion object {
         const val DEFAULT_AI_MODEL = "glm-4-flash"
+
+        /** 匹配地址末尾的版本段（/v1、/v4 等）。 */
+        val VERSION_SEGMENT_REGEX = Regex("/v\\d+$")
     }
 }

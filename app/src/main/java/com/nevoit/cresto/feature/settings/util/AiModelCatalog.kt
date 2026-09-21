@@ -32,6 +32,9 @@ object AiModelCatalog {
 
     private const val DEFAULT_MODELS_ENDPOINT = "https://open.bigmodel.cn/api/paas/v4/models"
 
+    /** 匹配地址末尾的版本段（/v1、/v4 等），兼容版本段出现在路径中间的服务。 */
+    private val VERSION_SEGMENT_REGEX = Regex("/v\\d+$")
+
     private val json = Json { ignoreUnknownKeys = true }
 
     fun resolveModelsEndpoint(rawUrl: String): String {
@@ -43,7 +46,8 @@ object AiModelCatalog {
         return when {
             normalized.isEmpty() -> DEFAULT_MODELS_ENDPOINT
             normalized.endsWith("/models") -> normalized
-            normalized.endsWith("/v1") || normalized.endsWith("/v4") -> "$normalized/models"
+            // 版本段在路径中间时（例如 https://api.commandcode.ai/provider/v1）只补 /models。
+            VERSION_SEGMENT_REGEX.containsMatchIn(normalized) -> "$normalized/models"
             else -> "$normalized/v1/models"
         }
     }
