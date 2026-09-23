@@ -3,8 +3,16 @@ package com.nevoit.cresto.feature.settings
 
 // Import necessary libraries and components
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +43,8 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.nevoit.cresto.R
 import com.nevoit.cresto.feature.settings.util.AISettingsViewModel
+import com.nevoit.cresto.feature.settings.util.AI_ENDPOINT_PRESETS
+import com.nevoit.cresto.feature.settings.util.AiModelTarget
 import com.nevoit.cresto.theme.AppButtonColors
 import com.nevoit.cresto.theme.AppColors
 import com.nevoit.cresto.theme.AppSpecs
@@ -83,6 +93,12 @@ fun AIScreen(aiSettingsViewModel: AISettingsViewModel = viewModel()) {
     val apiKey by aiSettingsViewModel.apiKey
     val textModel by aiSettingsViewModel.textModel
     val multimodalModel by aiSettingsViewModel.multimodalModel
+    val availableModels by aiSettingsViewModel.availableModels
+    val isFetchingModels by aiSettingsViewModel.isFetchingModels
+    val modelFetchError by aiSettingsViewModel.modelFetchError
+    val modelTarget by aiSettingsViewModel.modelTarget
+    val extractGroupWhenCreating by aiSettingsViewModel.extractGroupWhenCreating
+    val extractFlagWhenCreating by aiSettingsViewModel.extractFlagWhenCreating
 
     val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -138,6 +154,30 @@ fun AIScreen(aiSettingsViewModel: AISettingsViewModel = viewModel()) {
                 )
                 VGap(24.dp)
             }
+            // 常见服务的端点预设，点一下就把地址填好
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AI_ENDPOINT_PRESETS.forEach { preset ->
+                        GlasenseButton(
+                            onClick = { aiSettingsViewModel.onApiPresetSelected(preset.baseUrl) },
+                            colors = AppButtonColors.action()
+                        ) {
+                            Text(
+                                text = preset.name,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+                VGap(24.dp)
+            }
             item {
                 ConfigTextField(
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -187,6 +227,100 @@ fun AIScreen(aiSettingsViewModel: AISettingsViewModel = viewModel()) {
                     )
                 )
                 VGap(24.dp)
+            }
+            // 从当前 API 地址拉取可用模型，点选后写入上面选定的模型字段
+            item {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        GlasenseButton(
+                            onClick = { aiSettingsViewModel.fetchModels() },
+                            colors = AppButtonColors.action()
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    if (isFetchingModels) R.string.ai_fetching_models
+                                    else R.string.ai_fetch_models
+                                ),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                        GlasenseButton(
+                            onClick = { aiSettingsViewModel.onModelTargetChanged(AiModelTarget.TEXT) },
+                            colors = if (modelTarget == AiModelTarget.TEXT) {
+                                AppButtonColors.primary()
+                            } else {
+                                AppButtonColors.secondary()
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.text_processing_model),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                        GlasenseButton(
+                            onClick = { aiSettingsViewModel.onModelTargetChanged(AiModelTarget.MULTIMODAL) },
+                            colors = if (modelTarget == AiModelTarget.MULTIMODAL) {
+                                AppButtonColors.primary()
+                            } else {
+                                AppButtonColors.secondary()
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.multimodal_model),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    modelFetchError?.let { message ->
+                        VGap(8.dp)
+                        Text(
+                            text = message,
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        )
+                    }
+                    if (availableModels.isNotEmpty()) {
+                        VGap(12.dp)
+                        Text(
+                            text = stringResource(R.string.ai_models),
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        )
+                        VGap(4.dp)
+                        availableModels.forEach { model ->
+                            Text(
+                                text = model,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { aiSettingsViewModel.onModelSelected(model) }
+                                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                            )
+                        }
+                    }
+                    VGap(24.dp)
+                }
+            }
+            Section(
+                header = { stringResource(R.string.ai_extract_extra) },
+                footer = { stringResource(R.string.ai_extract_extra_footer) }
+            ) {
+                CustomSwitchRow(
+                    checked = extractGroupWhenCreating,
+                    onCheckedChange = aiSettingsViewModel::onExtractGroupChanged
+                ) {
+                    Text(stringResource(R.string.ai_extract_group))
+                }
+                CustomSwitchRow(
+                    checked = extractFlagWhenCreating,
+                    onCheckedChange = aiSettingsViewModel::onExtractFlagChanged
+                ) {
+                    Text(stringResource(R.string.ai_extract_flag))
+                }
             }
             Section() {
                 Row(

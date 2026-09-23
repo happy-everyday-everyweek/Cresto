@@ -126,6 +126,13 @@
     <string name="url" translatable="false">URL</string>
     <string name="text_processing_model">Text Processing Model</string>
     <string name="multimodal_model">Multimodal Model</string>
+    <string name="ai_fetch_models">Fetch models</string>
+    <string name="ai_fetching_models">Fetching…</string>
+    <string name="ai_models">Available models</string>
+    <string name="ai_extract_extra">Extra fields when AI creates todos</string>
+    <string name="ai_extract_extra_footer">Optional. When enabled, the model also reads these fields from your text or screenshot and writes them into the new todos.</string>
+    <string name="ai_extract_group">Read group name</string>
+    <string name="ai_extract_flag">Read flag (priority color)</string>
     <string name="model" translatable="false">Model</string>
     <string name="save">Save</string>
     <string name="save_settings">Save Settings</string>

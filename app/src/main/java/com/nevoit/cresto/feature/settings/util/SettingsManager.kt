@@ -32,6 +32,8 @@ object SettingsManager {
     private const val KEY_AI_API_KEY = "ai_api_key"
     private const val KEY_AI_TEXT_MODEL = "ai_text_model"
     private const val KEY_AI_MULTIMODAL_MODEL = "ai_multimodal_model"
+    private const val KEY_AI_EXTRACT_GROUP = "ai_extract_group"
+    private const val KEY_AI_EXTRACT_FLAG = "ai_extract_flag"
     private const val KEY_EASTER_EGG = "easter_egg"
     private const val KEY_SUPER_GRAPHIC_ULTRA_MODERN_GIRL = "super graphic ultra modern girl"
     private const val KEY_HAS_RETURNED_TO_TODAY_BY_TITLE = "has_returned_to_today_by_title"
@@ -73,6 +75,8 @@ object SettingsManager {
         mutableStateOf(
             mmkv.decodeString(KEY_AI_MULTIMODAL_MODEL, DEFAULT_AI_MODEL) ?: DEFAULT_AI_MODEL
         )
+    val aiExtractGroupState = mutableStateOf(mmkv.decodeBool(KEY_AI_EXTRACT_GROUP, false))
+    val aiExtractFlagState = mutableStateOf(mmkv.decodeBool(KEY_AI_EXTRACT_FLAG, false))
     val isEasterEggState = mutableStateOf(mmkv.decodeBool(KEY_EASTER_EGG, false))
     val isSuperGraphicUltraModernGirlState =
         mutableStateOf(mmkv.decodeBool(KEY_SUPER_GRAPHIC_ULTRA_MODERN_GIRL, false))
@@ -215,6 +219,20 @@ object SettingsManager {
             mmkv.encode(KEY_AI_MULTIMODAL_MODEL, value)
             aiMultimodalModelState.value = value
         }
+    /** 让 AI 创建待办时一并读取分组名。 */
+    var aiExtractGroupWhenCreating: Boolean
+        get() = mmkv.decodeBool(KEY_AI_EXTRACT_GROUP, false)
+        set(value) {
+            mmkv.encode(KEY_AI_EXTRACT_GROUP, value)
+            aiExtractGroupState.value = value
+        }
+    /** 让 AI 创建待办时一并判断标记（优先级颜色）。 */
+    var aiExtractFlagWhenCreating: Boolean
+        get() = mmkv.decodeBool(KEY_AI_EXTRACT_FLAG, false)
+        set(value) {
+            mmkv.encode(KEY_AI_EXTRACT_FLAG, value)
+            aiExtractFlagState.value = value
+        }
 
     var isEasterEggEnabled: Boolean
         get() = mmkv.decodeBool(KEY_EASTER_EGG, false)
@@ -283,6 +301,8 @@ object SettingsManager {
         aiApiKey = ""
         aiTextModel = DEFAULT_AI_MODEL
         aiMultimodalModel = DEFAULT_AI_MODEL
+        aiExtractGroupWhenCreating = false
+        aiExtractFlagWhenCreating = false
     }
 }
 

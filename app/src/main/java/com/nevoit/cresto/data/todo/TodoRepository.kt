@@ -299,11 +299,30 @@ class TodoRepository(
         if (aiItems.isEmpty()) return emptyList()
 
         val insertedTodos = todoDatabase.withTransaction {
+            val groupsByName = todoDao.getAllTodoGroupsSnapshot()
+                .associateByTo(mutableMapOf()) { it.name.trim().lowercase() }
             aiItems.map { eventItem ->
+                // 分组名要落到具体分组：优先复用同名分组，没有就新建一个
+                val groupId = eventItem.groupName
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { name ->
+                        val key = name.lowercase()
+                        val existing = groupsByName[key]
+                        if (existing != null) {
+                            existing.id
+                        } else {
+                            val newId = createTodoGroup(name).toInt()
+                            groupsByName[key] = TodoGroup(id = newId, name = name)
+                            newId
+                        }
+                    }
                 val todo = TodoItem(
                     title = eventItem.title,
                     isCompleted = eventItem.isCompleted,
                     completedDateTime = if (eventItem.isCompleted) LocalDateTime.now() else null,
+                    flag = eventItem.flag ?: 0,
+                    groupId = groupId,
                     dueDate = try {
                         LocalDate.parse(eventItem.date, DateTimeFormatter.ISO_LOCAL_DATE)
                     } catch (_: Exception) {

@@ -135,6 +135,19 @@ class AiTodoExtractor {
 
     private fun getSystemInstruction(): String {
         val date = LocalDateTime.now().toString()
+        // 两个开关都关闭时 extraRules 为空，提示词与之前完全一致。
+        val extraRules = buildString {
+            if (SettingsManager.aiExtractGroupWhenCreating) {
+                appendLine("            7.  提取groupName(分组名，可选):")
+                appendLine("                *   如果原文提到这份待办属于哪个分组、清单或类别（例如“工作”“家里”），把分组名原样写进groupName字段。")
+                appendLine("                *   没提到就不要返回该字段，不要臆造分组。")
+            }
+            if (SettingsManager.aiExtractFlagWhenCreating) {
+                appendLine("            8.  提取flag(标记，可选):")
+                appendLine("                *   按紧急/重要程度给出一个颜色标记，flag 取值 1-7：1=红(最紧急) 2=橙 3=黄 4=绿(日常) 5=蓝 6=紫 7=灰(优先级最低)。")
+                appendLine("                *   判断不出来就不要返回该字段。")
+            }
+        }
         return """
             现在时间是${date}。你是一个信息提取AI助手。你的任务是分析我发送给你的文本或图片内容，并严格按照以下要求提取待办事项信息，最后以指定的JSON格式返回。
 
@@ -160,16 +173,16 @@ class AiTodoExtractor {
     *   若同一待办包含“购买/准备/采购”等动作后跟并列物品（例如“买茄子、土豆、酱油和醋”），必须拆分为多个subTasks。
     *   并列物品即使未使用顿号，也应结合语义进行合理拆分（如“买茄子土豆酱油和醋”）。
     *   购买类subTasks建议保留动作动词，例如“买茄子”“买土豆”。
-6.  如果无法提取任何日程，返回Error: No tasks
-
-输出格式要求:
+            6.  如果无法提取任何日程，返回Error: No tasks
+${extraRules}
+            输出格式要求:
 
 *   返回结果必须是一个结构完整的JSON对象。
 *   JSON对象的最外层应包含一个quantity字段，其值为提取到的待办事项总数。
 *   所有待办事项应收录在名为items的数组中。
 *   数组中的每一个元素都是一个独立的对象。
 *   title和date是必填字段。
-*   startTime, endTime, reminderMode, reminderOffsetMinutes, reminderDayOffset, reminderTime, subTasks 等为可选字段，仅在提取到相关信息时返回。
+*   startTime, endTime, reminderMode, reminderOffsetMinutes, reminderDayOffset, reminderTime, subTasks, groupName, flag 等为可选字段，仅在提取到相关信息时返回。
 
 从现在开始处理我发送给你的信息，并仅返回符合上述要求的JSON对象，不要包含任何额外的解释或文字。
          """.trimIndent()
@@ -219,6 +232,19 @@ class AiTodoExtractor {
                     ?: itemObject["sub_tasks"]
                 val subTasks = extractSubTaskTexts(subTasksElement)
 
+                val groupName = (
+                        itemObject["groupName"]
+                            ?: itemObject["group"]
+                            ?: itemObject["category"]
+                        )
+                    .asTrimmedText()
+
+                val flagValue = (itemObject["flag"] as? JsonPrimitive)
+                    ?.contentOrNull
+                    ?.trim()
+                    ?.toIntOrNull()
+                    ?.takeIf { it in 1..7 }
+
                 buildJsonObject {
                     put("title", title)
                     put("date", date)
@@ -229,6 +255,9 @@ class AiTodoExtractor {
                     itemObject["reminderOffsetMinutes"]?.let { put("reminderOffsetMinutes", it) }
                     itemObject["reminderDayOffset"]?.let { put("reminderDayOffset", it) }
                     itemObject["reminderTime"]?.let { put("reminderTime", it) }
+
+                    if (groupName.isNotEmpty()) put("groupName", groupName)
+                    if (flagValue != null) put("flag", flagValue)
 
                     put("subTasks", buildJsonArray {
                         subTasks.forEach { add(JsonPrimitive(it)) }
@@ -279,10 +308,12 @@ class AiTodoExtractor {
         if (rawUrl.isBlank()) return defaultEndpoint
 
         val normalized = rawUrl.trim().trimEnd('/')
-        return if (normalized.endsWith("/chat/completions")) {
-            normalized
-        } else {
-            "$normalized/v1/chat/completions"
+        return when {
+            normalized.endsWith("/chat/completions") -> normalized
+            // 有些服务的版本段在路径中间（例如 https://api.commandcode.ai/provider/v1），
+            // 这种地址只需补 /chat/completions，否则会拼出 /v1/v1/chat/completions 这样的错误地址。
+            VERSION_SEGMENT_REGEX.containsMatchIn(normalized) -> "$normalized/chat/completions"
+            else -> "$normalized/v1/chat/completions"
         }
     }
 
@@ -340,5 +371,8 @@ class AiTodoExtractor {
 
     private companion object {
         const val DEFAULT_AI_MODEL = "glm-4-flash"
+
+        /** 匹配地址末尾的版本段（/v1、/v4 等）。 */
+        val VERSION_SEGMENT_REGEX = Regex("/v\\d+$")
     }
 }
