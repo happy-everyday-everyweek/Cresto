@@ -79,6 +79,10 @@ jobs:
         run: bash ./gradlew :app:assembleDebug --console=plain --no-configuration-cache -Pandroid.aapt2.process.daemon=false
 
       - name: Collect artifacts
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          CODE: ${{ steps.version.outputs.code }}
+          NAME: ${{ steps.version.outputs.name }}
         run: |
           mkdir -p dist
           APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -n 1)
@@ -86,10 +90,35 @@ jobs:
             echo "未找到构建产物"
             exit 1
           fi
-          cp "$APK" "dist/cresto-${{ steps.version.outputs.tag }}.apk"
+          cp "$APK" "dist/cresto-$TAG.apk"
           cd dist
           sha256sum ./*.apk > SHA256SUMS.txt
-          ls -l
+          cd ..
+          python3 - "$TAG" "$CODE" "$NAME" "$GITHUB_REPOSITORY" <<'PY'
+          import datetime
+          import json
+          import sys
+
+          tag, code, name, repo = sys.argv[1:5]
+          manifest = {
+              "schemaVersion": 1,
+              "platform": "android",
+              "channel": "custom",
+              "versionCode": int(code),
+              "versionName": name,
+              "publishedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "downloadUrl": f"https://github.com/{repo}/releases/download/{tag}/cresto-{tag}.apk",
+              "description": {
+                  "zh-CN": f"Cresto 定制版 {name}（versionCode {code}）",
+                  "en": f"Cresto custom build {name} (versionCode {code})",
+              },
+          }
+          with open("dist/latest.json", "w", encoding="utf-8") as handle:
+              json.dump(manifest, handle, ensure_ascii=False, indent=2)
+              handle.write("\n")
+          print(json.dumps(manifest, ensure_ascii=False))
+          PY
+          ls -l dist
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

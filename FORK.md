@@ -17,6 +17,7 @@
 - 首页下拉进入沉浸模式：在原地隐藏顶栏（搜索、排序、加号）、列表标题行与分组选择行、底部标签栏与渐变遮罩；横屏时同一批卡片按两列排列；按返回键退出。
 - AI 增强（对应上游 issue #33 的第 1、4 条）：创建待办时可选择让 AI 读取分组与标记；AI 设置页提供 API 地址预设与“获取模型列表”按钮。
 - 修复 API 地址拼接：地址中版本段不在末尾时（例如 `https://api.commandcode.ai/provider/v1`），原先会被拼成 `/v1/v1/chat/completions` 导致请求失败，现已修正。
+- 应用内更新检查：改为读取本仓库最新 Release 的更新清单，只会提示定制版的新版本，不再提示上游版本。
 
 ## 版本号与发布
 
@@ -43,7 +44,7 @@ git push origin v1.0-alpha1085-custom.1
 
 发布附件是 debug 签名的 APK，可以直接安装。由于签名与上游官方版不同，从上游版本切换过来时需要先卸载再安装。若希望发布正式签名包，可在仓库 Secrets 中配置 `MOMENTO_SIGNING_STORE_FILE`、`MOMENTO_SIGNING_STORE_PASSWORD`、`MOMENTO_SIGNING_KEY_ALIAS`、`MOMENTO_SIGNING_KEY_PASSWORD`，再把 `Release` 工作流改用 `assembleRelease`。
 
-应用内的“检查更新”仍指向上游的更新清单地址（`https://nevodev.github.io/cresto/update/latest.json`），因此会提示上游版本；如需屏蔽，可在 custom 分支上修改 `UPDATE_MANIFEST_URL`。
+应用内的“检查更新”读取的是本仓库最新 Release 里的更新清单（`https://github.com/happy-everyday-everyweek/Cresto/releases/latest/download/latest.json`），该文件由 `Release` 工作流在发布时自动生成并上传，所以在 custom 分支构建的版本只会提示本仓库的新版本，不会提示上游版本。
 
 ## 本地构建
 
