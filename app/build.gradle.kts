@@ -58,7 +58,8 @@ android {
         buildConfigField(
             "String",
             "UPDATE_MANIFEST_URL",
-            "\"https://nevodev.github.io/cresto/update/latest.json\""
+            // 定制版（custom 分支）：更新检查指向本仓库发行版，不再提示上游版本。
+            "\"https://github.com/happy-everyday-everyweek/Cresto/releases/latest/download/latest.json\""
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
