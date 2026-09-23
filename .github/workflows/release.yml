@@ -76,6 +76,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build APK
+        env:
+          MOMENTO_SIGNING_STORE_FILE: ${{ github.workspace }}/keystore/cresto-custom.jks
+          MOMENTO_SIGNING_STORE_PASSWORD: crestocustom
+          MOMENTO_SIGNING_KEY_ALIAS: cresto
+          MOMENTO_SIGNING_KEY_PASSWORD: crestocustom
         run: bash ./gradlew :app:assembleDebug --console=plain --no-configuration-cache -Pandroid.aapt2.process.daemon=false
 
       - name: Collect artifacts
@@ -131,6 +136,6 @@ jobs:
 
             - versionCode：${{ steps.version.outputs.code }}
             - versionName：${{ steps.version.outputs.name }}
-            - 安装包为 debug 签名，可直接安装；与上游官方版签名不同，切换时需要先卸载再安装。
+            - 安装包使用仓库内固定 keystore 签名，可直接覆盖安装；与上游官方版签名不同，首次从上游版切换需要先卸载再安装。
             - 定制功能与分支说明见仓库中的 FORK.md。
           files: dist/*
