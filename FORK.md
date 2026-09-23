@@ -42,7 +42,7 @@ git push origin v1.0-alpha1085-custom.1
 
 ## 安装说明
 
-发布附件是 debug 签名的 APK，可以直接安装。由于签名与上游官方版不同，从上游版本切换过来时需要先卸载再安装。若希望发布正式签名包，可在仓库 Secrets 中配置 `MOMENTO_SIGNING_STORE_FILE`、`MOMENTO_SIGNING_STORE_PASSWORD`、`MOMENTO_SIGNING_KEY_ALIAS`、`MOMENTO_SIGNING_KEY_PASSWORD`，再把 `Release` 工作流改用 `assembleRelease`。
+发布附件使用仓库内的 `keystore/cresto-custom.jks` 签名（别名 `cresto`，口令 `crestocustom`），每次发布签名保持一致，所以新版本可以直接覆盖安装、应用内更新也能装上。该签名与上游官方版不同，从上游版本或其他签名切过来时需要先卸载再安装。这份 keystore 是自用签名，如需保密可改为存放在仓库 Secrets 中并在工作流里引用。
 
 应用内的“检查更新”读取的是本仓库最新 Release 里的更新清单（`https://github.com/happy-everyday-everyweek/Cresto/releases/latest/download/latest.json`），该文件由 `Release` 工作流在发布时自动生成并上传，所以在 custom 分支构建的版本只会提示本仓库的新版本，不会提示上游版本。
 
