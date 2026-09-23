@@ -1,0 +1,87 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Merge upstream into master and custom
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/Nevodev/Cresto.git 2>/dev/null || git remote set-url upstream https://github.com/Nevodev/Cresto.git
+
+      - name: Sync branches
+        id: sync
+        run: |
+          git fetch upstream master
+          git checkout master
+
+          if ! git merge --no-edit upstream/master; then
+            git merge --abort || true
+            echo "status=master-conflict" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git push origin master
+
+          if git ls-remote --exit-code --heads origin custom > /dev/null 2>&1; then
+            git fetch origin custom
+            git checkout custom
+            if ! git merge --no-edit origin/master; then
+              git merge --abort || true
+              echo "status=custom-conflict" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git push origin custom
+          fi
+
+          echo "status=ok" >> "$GITHUB_OUTPUT"
+
+      - name: Report manual action needed
+        if: steps.sync.outputs.status != 'ok'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.sync.outputs.status }}';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `上游同步需要手动处理（${status}）`,
+              body: [
+                '自动同步上游时遇到冲突，本次没有推送任何分支。',
+                '',
+                `冲突位置：\`${status}\``,
+                '',
+                '处理方式：',
+                '```bash',
+                'git fetch upstream && git checkout master && git merge upstream/master',
+                '# 解决冲突后',
+                'git push origin master',
+                'git checkout custom && git merge origin/master && git push origin custom',
+                '```',
+                '',
+                `工作流运行记录：${runUrl}`,
+              ].join('\n'),
+            });

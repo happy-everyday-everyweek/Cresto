@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发布的 tag，例如 v1.0-alpha1085-custom.1"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build APK and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          CODE=$(printf '%s' "$TAG" | sed -nE 's/.*alpha([0-9]+).*/\1/p')
+          if [ -z "$CODE" ]; then
+            CODE=$(sed -nE 's/^VERSION_CODE=(.*)$/\1/p' app/version.properties)
+          fi
+          NAME=$(printf '%s' "$TAG" | sed -E 's/^v//')
+          {
+            echo "tag=$TAG"
+            echo "code=$CODE"
+            echo "name=$NAME"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG code=$CODE name=$NAME"
+
+      - name: Apply version to build
+        run: |
+          sed -i -E "s/^VERSION_CODE=.*/VERSION_CODE=${{ steps.version.outputs.code }}/" app/version.properties
+          sed -i -E "s/^VERSION_NAME=.*/VERSION_NAME=${{ steps.version.outputs.name }}/" app/version.properties
+          cat app/version.properties
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager --install "platforms;android-37" > /dev/null
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        run: ./gradlew :app:assembleDebug --console=plain --no-configuration-cache -Pandroid.aapt2.process.daemon=false
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "未找到构建产物"
+            exit 1
+          fi
+          cp "$APK" "dist/cresto-${{ steps.version.outputs.tag }}.apk"
+          cd dist
+          sha256sum ./*.apk > SHA256SUMS.txt
+          ls -l
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Cresto 定制版 ${{ steps.version.outputs.name }}"
+          generate_release_notes: true
+          body: |
+            基于上游 Nevodev/Cresto 构建的定制版。
+
+            - versionCode：${{ steps.version.outputs.code }}
+            - versionName：${{ steps.version.outputs.name }}
+            - 安装包为 debug 签名，可直接安装；与上游官方版签名不同，切换时需要先卸载再安装。
+            - 定制功能与分支说明见仓库中的 FORK.md。
+          files: dist/*
