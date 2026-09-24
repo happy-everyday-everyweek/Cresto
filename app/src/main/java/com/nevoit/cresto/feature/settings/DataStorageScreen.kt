@@ -299,7 +299,9 @@ fun DataStorageScreen() {
 
         pendingExportJson = json
         val ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-        createBackupFileLauncher.launch("cresto_backup_$ts.json")
+        val prefix =
+            if (backupUiState.exportIncludesSettings) "cresto_full_backup" else "cresto_backup"
+        createBackupFileLauncher.launch("${prefix}_$ts.json")
     }
 
     LaunchedEffect(backupUiState.errorMessage) {
@@ -494,6 +496,16 @@ fun DataStorageScreen() {
                 ) {
                     Text(
                         text = stringResource(R.string.export_database),
+                        style = GlasenseTheme.type.body
+                    )
+                }
+                Row(
+                    onClick = {
+                        viewModel.exportBackupToJson(includeSettings = true)
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.export_all_data),
                         style = GlasenseTheme.type.body
                     )
                 }

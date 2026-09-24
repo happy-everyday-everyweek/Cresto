@@ -3,6 +3,7 @@ package com.nevoit.cresto.data.todo
 import androidx.room.withTransaction
 import com.nevoit.cresto.data.statistics.DailyStat
 import com.nevoit.cresto.data.todo.backup.RepeatRuleBackupDto
+import com.nevoit.cresto.data.todo.backup.SettingsBackup
 import com.nevoit.cresto.data.todo.backup.SubTodoBackupDto
 import com.nevoit.cresto.data.todo.backup.TodoBackupDto
 import com.nevoit.cresto.data.todo.backup.TodoBackupFile
@@ -860,14 +861,15 @@ class TodoRepository(
         ignoreUnknownKeys = true
     }
 
-    suspend fun exportToJson(): String {
+    suspend fun exportToJson(includeSettings: Boolean = false): String {
         val todos = todoDao.getAllTodosSnapshot()
         val subTodos = todoDao.getAllSubTodosSnapshot()
         val repeatRules = todoDao.getAllRepeatRulesSnapshot()
         val groups = todoDao.getAllTodoGroupsSnapshot()
 
         val backup = TodoBackupFile(
-            schemaVersion = 6,
+            // 7 表示文件里额外带了应用设置；导入端不校验这个字段，所以旧文件依旧可以导入。
+            schemaVersion = if (includeSettings) 7 else 6,
             exportedAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
             todos = todos.map {
                 TodoBackupDto(
@@ -927,7 +929,8 @@ class TodoRepository(
                     color = it.color,
                     sortOrder = it.sortOrder
                 )
-            }
+            },
+            settings = if (includeSettings) SettingsBackup.capture() else emptyList()
         )
 
         return backupJson.encodeToString(backup)

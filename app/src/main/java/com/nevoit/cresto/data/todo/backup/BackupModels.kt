@@ -9,7 +9,17 @@ data class TodoBackupFile(
     val todos: List<TodoBackupDto>,
     val subTodos: List<SubTodoBackupDto>,
     val repeatRules: List<RepeatRuleBackupDto> = emptyList(),
-    val groups: List<TodoGroupBackupDto> = emptyList()
+    val groups: List<TodoGroupBackupDto> = emptyList(),
+    // 仅在“导出全部数据”时填充；旧版本导出与导入逻辑不受影响。
+    val settings: List<SettingBackupEntry> = emptyList()
+)
+
+/** 单条应用设置。type 用于区分 MMKV 中的存储类型：string / int / bool。 */
+@Serializable
+data class SettingBackupEntry(
+    val key: String,
+    val type: String,
+    val value: String
 )
 
 @Serializable

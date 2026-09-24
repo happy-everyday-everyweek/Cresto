@@ -39,6 +39,7 @@ data class BackupUiState(
     val isExporting: Boolean = false,
     val isImporting: Boolean = false,
     val exportedJson: String? = null,
+    val exportIncludesSettings: Boolean = false,
     val importResult: ImportResult? = null,
     val errorMessage: String? = null
 )
@@ -580,17 +581,18 @@ class TodoViewModel(
     private val _backupUiState = MutableStateFlow(BackupUiState())
     val backupUiState: StateFlow<BackupUiState> = _backupUiState.asStateFlow()
 
-    fun exportBackupToJson() = viewModelScope.launch {
+    fun exportBackupToJson(includeSettings: Boolean = false) = viewModelScope.launch {
         _backupUiState.update {
             it.copy(
                 isExporting = true,
+                exportIncludesSettings = includeSettings,
                 errorMessage = null,
                 importResult = null
             )
         }
 
         runCatching {
-            repository.exportToJson()
+            repository.exportToJson(includeSettings)
         }.onSuccess { json ->
             _backupUiState.update {
                 it.copy(

@@ -156,6 +156,7 @@
     <string name="cache">Cache</string>
     <string name="total">Total</string>
     <string name="export_database">Export Backup File</string>
+    <string name="export_all_data">Export All Data (todos + settings + AI key)</string>
     <string name="import_database">Import Backup File</string>
     <string name="reset_all_settings">Reset All Settings</string>
     <string name="this_will_reset_all_settings_to_their_defaults_your_todos_will_not_be_deleted">This will reset all settings to their defaults. Your todos will not be deleted.</string>
