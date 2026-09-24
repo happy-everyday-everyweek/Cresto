@@ -83,6 +83,13 @@ jobs:
           MOMENTO_SIGNING_KEY_PASSWORD: crestocustom
         run: bash ./gradlew :app:assembleDebug --console=plain --no-configuration-cache -Pandroid.aapt2.process.daemon=false
 
+      - name: Verify APK signature
+        run: |
+          APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -maxdepth 2 -name apksigner | sort -V | tail -n 1)
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -n 1)
+          echo "使用 $APKSIGNER 核验 $APK"
+          "$APKSIGNER" verify --print-certs "$APK" | head -n 8
+
       - name: Collect artifacts
         env:
           TAG: ${{ steps.version.outputs.tag }}
